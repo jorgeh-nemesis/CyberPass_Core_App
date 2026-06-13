@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.example.cyberpass",
+  "applicationId": "com.cybercastle.cyberpass",
   "variantName": "release",
   "elements": [
     {
