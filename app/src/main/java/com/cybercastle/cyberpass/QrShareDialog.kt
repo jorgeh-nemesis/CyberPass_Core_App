@@ -35,7 +35,8 @@ fun QrShareDialog(
                 .fillMaxWidth()
                 .padding(16.dp),
             shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+            colors = CardDefaults.cardColors(containerColor = SurfaceTone),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -71,7 +72,7 @@ fun QrShareDialog(
                         )
                     }
                 } else {
-                    Text("Error generating QR", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.error_generating_qr), color = MaterialTheme.colorScheme.error)
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))

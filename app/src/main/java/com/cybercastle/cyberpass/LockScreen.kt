@@ -1,6 +1,8 @@
 package com.cybercastle.cyberpass
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.*
@@ -34,6 +36,7 @@ fun LockScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -50,6 +53,7 @@ fun LockScreen(
             onValueChange = { password = it },
             label = { Text(stringResource(R.string.master_password)) },
             singleLine = true,
+            textStyle = LocalTextStyle.current.merge(MonoCredentialStyle),
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -63,16 +67,17 @@ fun LockScreen(
             onClick = {
                 if (isFirstTime) {
                     val salt = CryptoManager.generateSalt()
-                    val key = CryptoManager.deriveKey(password.toCharArray(), salt)
+                    val key = CryptoManager.deriveKey(password.toCharArray(), salt, CryptoManager.ITERATIONS)
                     SecurePrefs.saveSalt(context, salt)
-                    val verifierHash = CryptoManager.deriveKey(password.toCharArray(), salt).encoded
-                    SecurePrefs.saveVerifier(context, verifierHash)
+                    SecurePrefs.saveIterations(context, CryptoManager.ITERATIONS)
+                    SecurePrefs.saveVerifier(context, key.encoded)
                     viewModel.setEncryptionKey(key)
                     onUnlocked()
                 } else {
                     val salt = SecurePrefs.getSalt(context) ?: return@Button
                     val storedVerifier = SecurePrefs.getVerifier(context) ?: return@Button
-                    val key = CryptoManager.deriveKey(password.toCharArray(), salt)
+                    val iterations = SecurePrefs.getIterations(context)
+                    val key = CryptoManager.deriveKey(password.toCharArray(), salt, iterations)
                     if (key.encoded.contentEquals(storedVerifier)) {
                         viewModel.setEncryptionKey(key)
                         onUnlocked()

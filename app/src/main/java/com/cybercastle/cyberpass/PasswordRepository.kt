@@ -21,6 +21,10 @@ class PasswordRepository(private val context: Context) {
 
     fun getEncryptionKey(): javax.crypto.SecretKey? = encryptionKey
 
+    fun clearEncryptionKey() {
+        encryptionKey = null
+    }
+
     suspend fun loadEntries(): List<PasswordEntry> = withContext(Dispatchers.IO) {
         val key = encryptionKey ?: return@withContext emptyList()
         if (!file.exists()) return@withContext emptyList()

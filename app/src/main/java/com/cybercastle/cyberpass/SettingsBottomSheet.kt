@@ -28,8 +28,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricPrompt
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
 
 @Composable
 fun SectionHeader(label: String) {
@@ -61,8 +59,9 @@ fun SettingsItem(
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         shape = RoundedCornerShape(14.dp),
-        color = Color(0xFF1E1E1E),
-        border = BorderStroke(1.dp, Color(0xFF252525))
+        color = SurfaceTone,
+        tonalElevation = 1.dp,
+        border = BorderStroke(1.dp, Color(0xFF2A2A2A))
     ) {
         Row(
             modifier = Modifier
@@ -170,11 +169,21 @@ fun SettingsBottomSheet(
     val bioPromptSubtitle = stringResource(R.string.biometric_prompt_subtitle)
     val bioNegativeButton = stringResource(R.string.biometric_negative_button)
 
+    val biometricNotAvailableMsg = stringResource(R.string.biometric_not_available)
+    val encryptionKeyNotFoundMsg = stringResource(R.string.encryption_key_not_found)
+    val biometricEnabledSuccessMsg = stringResource(R.string.biometric_enabled_success)
+    val biometricEncryptKeyFailedMsg = stringResource(R.string.biometric_encrypt_key_failed)
+    val biometricCipherNotAuthenticatedMsg = stringResource(R.string.biometric_cipher_not_authenticated)
+    val biometricErrorMsg = stringResource(R.string.biometric_error)
+    val biometricInitErrorMsg = stringResource(R.string.biometric_init_error)
+    val biometricDisabledMsg = stringResource(R.string.biometric_disabled)
+    val activityNotFoundMsg = stringResource(R.string.activity_not_found)
+
     fun toggleBiometric(enabled: Boolean) {
         if (enabled) {
             val authStatus = BiometricAuthManager.canAuthenticate(context)
             if (authStatus != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
-                Toast.makeText(context, "Biometric authentication not available or not enrolled", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, biometricNotAvailableMsg, Toast.LENGTH_LONG).show()
                 return
             }
 
@@ -182,10 +191,10 @@ fun SettingsBottomSheet(
             if (activity != null) {
                 val key = viewModel.getEncryptionKey()
                 if (key == null) {
-                    Toast.makeText(context, "Encryption key not found. Please re-login.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, encryptionKeyNotFoundMsg, Toast.LENGTH_SHORT).show()
                     return
                 }
-                
+
                 try {
                     SecurityManager.createBiometricKey()
                     val cipher = try {
@@ -195,7 +204,7 @@ fun SettingsBottomSheet(
                         SecurityManager.createBiometricKey()
                         SecurityManager.getEncryptCipher()
                     }
-                    
+
                     BiometricAuthManager.showBiometricPrompt(
                         activity = activity,
                         title = bioPromptTitle,
@@ -211,32 +220,32 @@ fun SettingsBottomSheet(
                                     SecurePrefs.saveEncryptedKey(context, iv + encrypted)
                                     SecurePrefs.setBiometricEnabled(context, true)
                                     biometricEnabled.value = true
-                                    Toast.makeText(context, "Biometric enabled successfully", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, biometricEnabledSuccessMsg, Toast.LENGTH_SHORT).show()
                                 } catch (e: Exception) {
                                     e.printStackTrace()
-                                    Toast.makeText(context, "Failed to encrypt key: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, biometricEncryptKeyFailedMsg.format(e.message), Toast.LENGTH_SHORT).show()
                                 }
                             } else {
-                                Toast.makeText(context, "Cipher not authenticated", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, biometricCipherNotAuthenticatedMsg, Toast.LENGTH_SHORT).show()
                             }
                         },
                         onError = { err ->
                             coroutineScope.launch {
-                                Toast.makeText(context, "Biometric error: $err", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, biometricErrorMsg.format(err), Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Toast.makeText(context, "Error initializing biometric: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, biometricInitErrorMsg.format(e.message), Toast.LENGTH_SHORT).show()
                 }
             } else {
-                Toast.makeText(context, "Activity not found", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, activityNotFoundMsg, Toast.LENGTH_SHORT).show()
             }
         } else {
             SecurePrefs.setBiometricEnabled(context, false)
             biometricEnabled.value = false
-            Toast.makeText(context, "Biometric disabled", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, biometricDisabledMsg, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -259,12 +268,10 @@ fun SettingsBottomSheet(
     ) { uri ->
         if (uri != null) {
             val success = try {
-                val file = File(context.filesDir, "passwords.enc")
-                if (file.exists()) {
+                val backup = BackupManager.createBackup(context)
+                if (backup != null) {
                     context.contentResolver.openOutputStream(uri)?.use { out ->
-                        file.inputStream().use { `in` ->
-                            `in`.copyTo(out)
-                        }
+                        out.write(backup)
                     }
                     true
                 } else false
@@ -283,14 +290,15 @@ fun SettingsBottomSheet(
     ) { uri ->
         if (uri != null) {
             val success = try {
-                context.contentResolver.openInputStream(uri)?.use { `in` ->
-                    val destFile = File(context.filesDir, "passwords.enc")
-                    FileOutputStream(destFile).use { out ->
-                        `in`.copyTo(out)
-                    }
+                val bytes = context.contentResolver.openInputStream(uri)?.use { `in` -> `in`.readBytes() }
+                if (bytes != null && BackupManager.restoreBackup(context, bytes)) {
+                    // The vault's key/salt just changed underneath the current
+                    // session, so force re-authentication against the restored data.
+                    viewModel.lock()
+                    true
+                } else {
+                    false
                 }
-                viewModel.loadEntries()
-                true
             } catch (e: Exception) {
                 e.printStackTrace()
                 false

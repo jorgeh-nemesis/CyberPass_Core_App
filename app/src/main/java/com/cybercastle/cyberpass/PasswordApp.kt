@@ -1,10 +1,11 @@
 package com.cybercastle.cyberpass
 
-import android.content.ClipData
 import android.widget.Toast
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -15,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -34,7 +34,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun PasswordApp(viewModel: MainViewModel) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val showOnlyFavorites by viewModel.showOnlyFavorites.collectAsStateWithLifecycle()
+    val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
 
     val showAddDialog = remember { mutableStateOf(false) }
     val showSettings = remember { mutableStateOf(false) }
@@ -118,20 +118,13 @@ fun PasswordApp(viewModel: MainViewModel) {
                         titleContentColor = Color.White
                     ),
                     actions = {
-                        IconButton(onClick = { 
+                        IconButton(onClick = {
                             isSearching = !isSearching
                             if (!isSearching) viewModel.setSearchQuery("")
                         }) {
                             Icon(
                                 if (isSearching) Icons.Default.Close else Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = Color.White
-                            )
-                        }
-                        IconButton(onClick = { viewModel.toggleShowOnlyFavorites() }) {
-                            Icon(
-                                if (showOnlyFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = "Show favorites",
+                                contentDescription = stringResource(R.string.search),
                                 tint = Color.White
                             )
                         }
@@ -139,19 +132,23 @@ fun PasswordApp(viewModel: MainViewModel) {
                             onClick = { isReorderMode = !isReorderMode }
                         ) {
                             Icon(
-                                Icons.Default.Reorder, 
-                                contentDescription = "Toggle Reorder Mode",
+                                Icons.Default.Reorder,
+                                contentDescription = stringResource(R.string.toggle_reorder_mode),
                                 tint = if (isReorderMode) Color(0xFF2EFC54) else Color.White
                             )
                         }
                         IconButton(onClick = { showSettings.value = true }) {
                             Icon(
-                                Icons.Default.Settings, 
+                                Icons.Default.Settings,
                                 contentDescription = stringResource(R.string.settings),
                                 tint = Color.White
                             )
                         }
                     }
+                )
+                CategoryFilterRow(
+                    selected = categoryFilter,
+                    onSelected = { viewModel.setCategoryFilter(it) }
                 )
             }
         },
@@ -174,7 +171,7 @@ fun PasswordApp(viewModel: MainViewModel) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (searchQuery.isNotEmpty()) "No results found" else stringResource(R.string.no_passwords_yet),
+                    text = if (searchQuery.isNotEmpty()) stringResource(R.string.no_results_found) else stringResource(R.string.no_passwords_yet),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
@@ -195,15 +192,21 @@ fun PasswordApp(viewModel: MainViewModel) {
                             onEdit = { editingEntry.value = entry },
                             onDelete = { entryToDelete.value = entry },
                             onCopy = {
-                                scope.launch {
-                                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("password", entry.password)))
-                                }
+                                ClipboardGuard.copySensitive(
+                                    scope = scope,
+                                    clipboard = clipboard,
+                                    label = "password",
+                                    text = entry.password
+                                )
                                 Toast.makeText(context, passwordCopiedMsg, Toast.LENGTH_SHORT).show()
                             },
                             onCopyUsername = {
-                                scope.launch {
-                                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("username", entry.username)))
-                                }
+                                ClipboardGuard.copySensitive(
+                                    scope = scope,
+                                    clipboard = clipboard,
+                                    label = "username",
+                                    text = entry.username
+                                )
                                 Toast.makeText(context, usernameCopiedMsg, Toast.LENGTH_SHORT).show()
                             },
                             onShare = { sharingEntry.value = entry },
@@ -311,5 +314,38 @@ fun PasswordApp(viewModel: MainViewModel) {
                 }
             }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CategoryFilterRow(
+    selected: CategoryFilter,
+    onSelected: (CategoryFilter) -> Unit
+) {
+    val options = listOf(
+        CategoryFilter.ALL to stringResource(R.string.category_all),
+        CategoryFilter.LOGINS to stringResource(R.string.category_logins),
+        CategoryFilter.CARDS to stringResource(R.string.category_cards),
+        CategoryFilter.SECURE_NOTES to stringResource(R.string.category_secure_notes),
+        CategoryFilter.FAVORITES to stringResource(R.string.category_favorites)
+    )
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(options) { (filter, label) ->
+            FilterChip(
+                selected = selected == filter,
+                onClick = { onSelected(filter) },
+                label = { Text(label) },
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = Color(0xFF1A1A1A),
+                    labelColor = Color.White,
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
     }
 }

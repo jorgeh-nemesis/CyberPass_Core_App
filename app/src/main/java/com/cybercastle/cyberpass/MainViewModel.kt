@@ -23,17 +23,16 @@ class MainViewModel : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    private val _showOnlyFavorites = MutableStateFlow(false)
-    val showOnlyFavorites: StateFlow<Boolean> = _showOnlyFavorites
+    private val _categoryFilter = MutableStateFlow(CategoryFilter.ALL)
+    val categoryFilter: StateFlow<CategoryFilter> = _categoryFilter
 
     val entries: StateFlow<List<PasswordEntry>> = combine(
-        _entries, _searchQuery, _showOnlyFavorites
-    ) { entries, query, onlyFavorites ->
+        _entries, _searchQuery, _categoryFilter
+    ) { entries, query, categoryFilter ->
         entries.filter { entry ->
             val matchesQuery = entry.title.contains(query, ignoreCase = true) ||
                     entry.username.contains(query, ignoreCase = true)
-            val matchesFavorites = !onlyFavorites || entry.isFavorite
-            matchesQuery && matchesFavorites
+            matchesQuery && categoryFilter.matches(entry)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -41,8 +40,8 @@ class MainViewModel : ViewModel() {
         _searchQuery.value = query
     }
 
-    fun toggleShowOnlyFavorites() {
-        _showOnlyFavorites.value = !_showOnlyFavorites.value
+    fun setCategoryFilter(filter: CategoryFilter) {
+        _categoryFilter.value = filter
     }
 
     fun loadEntries() {
@@ -89,9 +88,28 @@ class MainViewModel : ViewModel() {
     private var _isLocked = MutableStateFlow(true)
     val isLocked: StateFlow<Boolean> = _isLocked
 
+    init {
+        viewModelScope.launch {
+            AppLockManager.lockRequested.collect { requested ->
+                if (requested) lock()
+            }
+        }
+    }
+
+    /** Wipes the in-memory key and entries and returns to the lock screen. */
+    fun lock() {
+        repository.clearEncryptionKey()
+        VaultSession.clear()
+        _entries.value = emptyList()
+        _isLocked.value = true
+        AppLockManager.acknowledgeLock()
+    }
+
     fun setEncryptionKey(key: javax.crypto.SecretKey) {
         repository.setEncryptionKey(key)
+        VaultSession.setKey(key)
         _isLocked.value = false
+        AppLockManager.acknowledgeUnlock()
         loadEntries()
     }
 
@@ -115,7 +133,8 @@ class MainViewModel : ViewModel() {
                 return@launch
             }
 
-            val oldKey = CryptoManager.deriveKey(oldPassword.toCharArray(), salt)
+            val oldIterations = SecurePrefs.getIterations(context)
+            val oldKey = CryptoManager.deriveKey(oldPassword.toCharArray(), salt, oldIterations)
             if (!oldKey.encoded.contentEquals(storedVerifier)) {
                 onResult(false)
                 return@launch
@@ -132,17 +151,18 @@ class MainViewModel : ViewModel() {
                 emptyList()
             }
 
-            // 3. Generate new salt and derive new key
+            // 3. Generate new salt and derive new key, upgrading to the current work factor
             val newSalt = CryptoManager.generateSalt()
-            val newKey = CryptoManager.deriveKey(newPassword.toCharArray(), newSalt)
+            val newKey = CryptoManager.deriveKey(newPassword.toCharArray(), newSalt, CryptoManager.ITERATIONS)
 
             // 4. Re-encrypt database with new key
             val json = gson.toJson(entries)
             val newEncrypted = CryptoManager.encrypt(json.toByteArray(Charsets.UTF_8), newKey)
             encryptedFile.writeBytes(newEncrypted)
 
-            // 5. Save new salt and verifier (using the new key's encoded bytes as verifier)
+            // 5. Save new salt, iteration count, and verifier (using the new key's encoded bytes as verifier)
             SecurePrefs.saveSalt(context, newSalt)
+            SecurePrefs.saveIterations(context, CryptoManager.ITERATIONS)
             SecurePrefs.saveVerifier(context, newKey.encoded)
 
             // 6. Update repository's current key

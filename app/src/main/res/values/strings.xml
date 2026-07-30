@@ -65,4 +65,38 @@
     <string name="delete_confirmation_title">Delete Entry</string>
     <string name="delete_confirmation_msg">Are you sure you want to delete this entry?</string>
     <string name="confirm">Confirm</string>
+
+    <string name="biometric_not_available">Biometric authentication not available or not enrolled</string>
+    <string name="encryption_key_not_found">Encryption key not found. Please re-login.</string>
+    <string name="biometric_enabled_success">Biometric enabled successfully</string>
+    <string name="biometric_encrypt_key_failed">Failed to encrypt key: %1$s</string>
+    <string name="biometric_cipher_not_authenticated">Cipher not authenticated</string>
+    <string name="biometric_error">Biometric error: %1$s</string>
+    <string name="biometric_init_error">Error initializing biometric: %1$s</string>
+    <string name="biometric_disabled">Biometric disabled</string>
+    <string name="activity_not_found">Activity not found</string>
+
+    <string name="no_results_found">No results found</string>
+    <string name="drag_to_reorder">Drag to reorder</string>
+    <string name="copy_username">Copy username</string>
+    <string name="copy_password">Copy password</string>
+    <string name="edit">Edit</string>
+    <string name="share_via_qr">Share via QR</string>
+    <string name="delete">Delete</string>
+    <string name="toggle_favorite">Toggle favorite</string>
+    <string name="show_favorites">Show favorites</string>
+    <string name="toggle_reorder_mode">Toggle Reorder Mode</string>
+    <string name="error_generating_qr">Error generating QR</string>
+
+    <string name="category_all">All</string>
+    <string name="category_logins">Logins</string>
+    <string name="category_cards">Cards</string>
+    <string name="category_secure_notes">Secure Notes</string>
+    <string name="category_favorites">Favorites</string>
+
+    <string name="clipboard_cleared">Clipboard cleared</string>
+
+    <string name="autofill_unlock_title">Unlock CyberPass</string>
+    <string name="autofill_pick_entry">Choose an entry to fill</string>
+    <string name="autofill_save_failed">Couldn\'t save to CyberPass</string>
 </resources>

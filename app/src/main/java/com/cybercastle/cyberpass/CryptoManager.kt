@@ -10,7 +10,14 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 object CryptoManager {
-    private const val ITERATIONS = 100000
+    // Work factor for newly created or rotated vaults. Existing vaults keep the
+    // iteration count they were created with (see SecurePrefs.getIterations) so
+    // raising this constant never locks out installs created under an older value.
+    const val ITERATIONS = 600_000
+
+    // Legacy default for vaults created before iteration count was persisted.
+    const val LEGACY_ITERATIONS = 100_000
+
     private const val KEY_LENGTH = 256 // bits
     private const val ALGORITHM = "AES"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
@@ -23,9 +30,9 @@ object CryptoManager {
         return salt
     }
 
-    fun deriveKey(password: CharArray, salt: ByteArray): SecretKey {
+    fun deriveKey(password: CharArray, salt: ByteArray, iterations: Int = ITERATIONS): SecretKey {
         val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-        val spec: KeySpec = PBEKeySpec(password, salt, ITERATIONS, KEY_LENGTH)
+        val spec: KeySpec = PBEKeySpec(password, salt, iterations, KEY_LENGTH)
         val secret = factory.generateSecret(spec)
         return SecretKeySpec(secret.encoded, ALGORITHM)
     }

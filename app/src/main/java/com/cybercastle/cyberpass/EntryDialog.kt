@@ -1,6 +1,8 @@
 package com.cybercastle.cyberpass
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -26,7 +28,11 @@ fun EntryDialog(
     var username by remember { mutableStateOf(initialEntry?.username ?: "") }
     var password by remember { mutableStateOf(initialEntry?.password ?: "") }
     var notes by remember { mutableStateOf(initialEntry?.notes ?: "") }
-    var category by remember { mutableStateOf(initialEntry?.category ?: "General") }
+    var category by remember {
+        mutableStateOf(
+            initialEntry?.category?.takeIf { it in VaultCategories.ALL } ?: VaultCategories.LOGINS
+        )
+    }
     var isFavorite by remember { mutableStateOf(initialEntry?.isFavorite ?: false) }
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -39,6 +45,7 @@ fun EntryDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
                 Row(
@@ -54,7 +61,7 @@ fun EntryDialog(
                     IconButton(onClick = { isFavorite = !isFavorite }) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Toggle favorite",
+                            contentDescription = stringResource(R.string.toggle_favorite),
                             tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -70,12 +77,19 @@ fun EntryDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = { category = it },
-                    label = { Text(stringResource(R.string.category)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                Text(
+                    text = stringResource(R.string.category),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                ChipSelector(
+                    options = listOf(
+                        VaultCategories.LOGINS to stringResource(R.string.category_logins),
+                        VaultCategories.CARDS to stringResource(R.string.category_cards),
+                        VaultCategories.SECURE_NOTES to stringResource(R.string.category_secure_notes)
+                    ),
+                    selectedOption = category,
+                    onOptionSelected = { category = it }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -93,6 +107,7 @@ fun EntryDialog(
                     onValueChange = { password = it },
                     label = { Text(stringResource(R.string.password)) },
                     singleLine = true,
+                    textStyle = LocalTextStyle.current.merge(MonoCredentialStyle),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {

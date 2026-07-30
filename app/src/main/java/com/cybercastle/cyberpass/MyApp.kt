@@ -12,5 +12,6 @@ class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
         appContext = applicationContext
+        AppLockManager.initialize()
     }
 }

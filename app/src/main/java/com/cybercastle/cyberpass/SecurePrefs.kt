@@ -13,6 +13,7 @@ object SecurePrefs {
     private const val KEY_VERIFIER = "verifier"
     private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
     private const val KEY_ENCRYPTED_KEY = "encrypted_key"
+    private const val KEY_ITERATIONS = "kdf_iterations"
 
     @Suppress("DEPRECATION")
     private fun getPrefs(context: Context) = EncryptedSharedPreferences.create(
@@ -41,6 +42,16 @@ object SecurePrefs {
     fun getVerifier(context: Context): ByteArray? {
         val verifierStr = getPrefs(context).getString(KEY_VERIFIER, null) ?: return null
         return verifierStr.split(",").map { it.toByte() }.toByteArray()
+    }
+
+    fun saveIterations(context: Context, iterations: Int) {
+        getPrefs(context).edit { putInt(KEY_ITERATIONS, iterations) }
+    }
+
+    // Vaults created before this field existed derived their key with
+    // CryptoManager.LEGACY_ITERATIONS, so that's the safe fallback.
+    fun getIterations(context: Context): Int {
+        return getPrefs(context).getInt(KEY_ITERATIONS, CryptoManager.LEGACY_ITERATIONS)
     }
 
     fun isBiometricEnabled(context: Context): Boolean {

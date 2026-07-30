@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -24,9 +25,9 @@ fun EntryCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = SurfaceTone
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -35,7 +36,7 @@ fun EntryCard(
             if (showDragHandle) {
                 Icon(
                     imageVector = Icons.Default.DragHandle,
-                    contentDescription = "Drag to reorder",
+                    contentDescription = stringResource(R.string.drag_to_reorder),
                     modifier = dragHandleModifier.padding(end = 16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -76,21 +77,21 @@ fun EntryCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onCopyUsername) {
-                        Icon(Icons.Default.Person, contentDescription = "Copy username")
+                        Icon(Icons.Default.Person, contentDescription = stringResource(R.string.copy_username))
                     }
                     IconButton(onClick = onCopy) {
-                        Icon(Icons.Default.VpnKey, contentDescription = "Copy password")
+                        Icon(Icons.Default.VpnKey, contentDescription = stringResource(R.string.copy_password))
                     }
                     IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit))
                     }
                     IconButton(onClick = onShare) {
-                        Icon(Icons.Default.QrCode, contentDescription = "Share via QR")
+                        Icon(Icons.Default.QrCode, contentDescription = stringResource(R.string.share_via_qr))
                     }
                     IconButton(onClick = onDelete) {
                         Icon(
                             Icons.Default.Delete,
-                            contentDescription = "Delete",
+                            contentDescription = stringResource(R.string.delete),
                             tint = MaterialTheme.colorScheme.error
                         )
                     }

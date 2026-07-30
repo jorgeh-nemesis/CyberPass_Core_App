@@ -1,6 +1,8 @@
 package com.cybercastle.cyberpass
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +38,7 @@ fun ChangePasswordDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -51,6 +54,7 @@ fun ChangePasswordDialog(
                     onValueChange = { oldPassword = it },
                     label = { Text(stringResource(R.string.current_password)) },
                     singleLine = true,
+                    textStyle = LocalTextStyle.current.merge(MonoCredentialStyle),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -60,6 +64,7 @@ fun ChangePasswordDialog(
                     onValueChange = { newPassword = it },
                     label = { Text(stringResource(R.string.new_password)) },
                     singleLine = true,
+                    textStyle = LocalTextStyle.current.merge(MonoCredentialStyle),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -69,6 +74,7 @@ fun ChangePasswordDialog(
                     onValueChange = { confirmPassword = it },
                     label = { Text(stringResource(R.string.confirm_new_password)) },
                     singleLine = true,
+                    textStyle = LocalTextStyle.current.merge(MonoCredentialStyle),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
