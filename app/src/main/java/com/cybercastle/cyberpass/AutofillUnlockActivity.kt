@@ -149,7 +149,7 @@ private fun AutofillUnlockScreen(
                                 return@launch
                             }
                             val iterations = SecurePrefs.getIterations(context)
-                            val key = CryptoManager.deriveKey(password.toCharArray(), salt, iterations)
+                            val key = CryptoManager.deriveKeySuspending(password.toCharArray(), salt, iterations)
                             if (!key.encoded.contentEquals(verifier)) {
                                 error = incorrectPasswordMsg
                                 isUnlocking = false

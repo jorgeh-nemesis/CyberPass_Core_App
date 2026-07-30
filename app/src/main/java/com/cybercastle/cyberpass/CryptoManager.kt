@@ -1,5 +1,7 @@
 package com.cybercastle.cyberpass
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.security.SecureRandom
 import java.security.spec.KeySpec
 import javax.crypto.Cipher
@@ -36,6 +38,15 @@ object CryptoManager {
         val secret = factory.generateSecret(spec)
         return SecretKeySpec(secret.encoded, ALGORITHM)
     }
+
+    // At 600,000 iterations PBKDF2 takes anywhere from ~0.5s to a few seconds
+    // on mobile CPUs - calling deriveKey() straight from a UI callback blocks
+    // the main thread long enough to trigger an ANR. Always derive through
+    // this suspend wrapper from a coroutine instead.
+    suspend fun deriveKeySuspending(password: CharArray, salt: ByteArray, iterations: Int = ITERATIONS): SecretKey =
+        withContext(Dispatchers.Default) {
+            deriveKey(password, salt, iterations)
+        }
 
     fun encrypt(data: ByteArray, key: SecretKey): ByteArray {
         val cipher = Cipher.getInstance(TRANSFORMATION)

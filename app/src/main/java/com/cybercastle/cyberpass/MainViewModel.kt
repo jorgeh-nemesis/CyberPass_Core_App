@@ -134,7 +134,7 @@ class MainViewModel : ViewModel() {
             }
 
             val oldIterations = SecurePrefs.getIterations(context)
-            val oldKey = CryptoManager.deriveKey(oldPassword.toCharArray(), salt, oldIterations)
+            val oldKey = CryptoManager.deriveKeySuspending(oldPassword.toCharArray(), salt, oldIterations)
             if (!oldKey.encoded.contentEquals(storedVerifier)) {
                 onResult(false)
                 return@launch
@@ -153,7 +153,7 @@ class MainViewModel : ViewModel() {
 
             // 3. Generate new salt and derive new key, upgrading to the current work factor
             val newSalt = CryptoManager.generateSalt()
-            val newKey = CryptoManager.deriveKey(newPassword.toCharArray(), newSalt, CryptoManager.ITERATIONS)
+            val newKey = CryptoManager.deriveKeySuspending(newPassword.toCharArray(), newSalt, CryptoManager.ITERATIONS)
 
             // 4. Re-encrypt database with new key
             val json = gson.toJson(entries)

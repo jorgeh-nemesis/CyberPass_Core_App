@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import javax.crypto.spec.SecretKeySpec
 
 @Composable
@@ -20,10 +21,12 @@ fun LockScreen(
     viewModel: MainViewModel
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var password by remember { mutableStateOf("") }
     val isFirstTime = remember { SecurePrefs.getSalt(context) == null }
     val isBiometricEnabled = remember { SecurePrefs.isBiometricEnabled(context) }
     var error by remember { mutableStateOf<String?>(null) }
+    var isUnlocking by remember { mutableStateOf(false) }
 
     val incorrectPasswordMsg = stringResource(R.string.incorrect_password)
     val bioDecryptionFailedMsg = stringResource(R.string.biometric_decryption_failed)
@@ -65,31 +68,49 @@ fun LockScreen(
 
         Button(
             onClick = {
-                if (isFirstTime) {
-                    val salt = CryptoManager.generateSalt()
-                    val key = CryptoManager.deriveKey(password.toCharArray(), salt, CryptoManager.ITERATIONS)
-                    SecurePrefs.saveSalt(context, salt)
-                    SecurePrefs.saveIterations(context, CryptoManager.ITERATIONS)
-                    SecurePrefs.saveVerifier(context, key.encoded)
-                    viewModel.setEncryptionKey(key)
-                    onUnlocked()
-                } else {
-                    val salt = SecurePrefs.getSalt(context) ?: return@Button
-                    val storedVerifier = SecurePrefs.getVerifier(context) ?: return@Button
-                    val iterations = SecurePrefs.getIterations(context)
-                    val key = CryptoManager.deriveKey(password.toCharArray(), salt, iterations)
-                    if (key.encoded.contentEquals(storedVerifier)) {
+                error = null
+                isUnlocking = true
+                scope.launch {
+                    if (isFirstTime) {
+                        val salt = CryptoManager.generateSalt()
+                        val key = CryptoManager.deriveKeySuspending(password.toCharArray(), salt, CryptoManager.ITERATIONS)
+                        SecurePrefs.saveSalt(context, salt)
+                        SecurePrefs.saveIterations(context, CryptoManager.ITERATIONS)
+                        SecurePrefs.saveVerifier(context, key.encoded)
                         viewModel.setEncryptionKey(key)
+                        isUnlocking = false
                         onUnlocked()
                     } else {
-                        error = incorrectPasswordMsg
+                        val salt = SecurePrefs.getSalt(context)
+                        val storedVerifier = SecurePrefs.getVerifier(context)
+                        if (salt == null || storedVerifier == null) {
+                            isUnlocking = false
+                            return@launch
+                        }
+                        val iterations = SecurePrefs.getIterations(context)
+                        val key = CryptoManager.deriveKeySuspending(password.toCharArray(), salt, iterations)
+                        isUnlocking = false
+                        if (key.encoded.contentEquals(storedVerifier)) {
+                            viewModel.setEncryptionKey(key)
+                            onUnlocked()
+                        } else {
+                            error = incorrectPasswordMsg
+                        }
                     }
                 }
             },
-            enabled = password.isNotBlank(),
+            enabled = password.isNotBlank() && !isUnlocking,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (isFirstTime) stringResource(R.string.create) else stringResource(R.string.unlock))
+            if (isUnlocking) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Text(if (isFirstTime) stringResource(R.string.create) else stringResource(R.string.unlock))
+            }
         }
 
         if (!isFirstTime && isBiometricEnabled) {
@@ -130,6 +151,7 @@ fun LockScreen(
                         }
                     }
                 },
+                enabled = !isUnlocking,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.Fingerprint, contentDescription = null)
