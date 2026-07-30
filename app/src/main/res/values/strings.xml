@@ -91,7 +91,7 @@
     <string name="category_all">All</string>
     <string name="category_logins">Logins</string>
     <string name="category_cards">Cards</string>
-    <string name="category_secure_notes">Secure Notes</string>
+    <string name="category_notes">Notes</string>
     <string name="category_favorites">Favorites</string>
 
     <string name="clipboard_cleared">Clipboard cleared</string>

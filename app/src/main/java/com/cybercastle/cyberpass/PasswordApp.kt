@@ -327,7 +327,7 @@ private fun CategoryFilterRow(
         CategoryFilter.ALL to stringResource(R.string.category_all),
         CategoryFilter.LOGINS to stringResource(R.string.category_logins),
         CategoryFilter.CARDS to stringResource(R.string.category_cards),
-        CategoryFilter.SECURE_NOTES to stringResource(R.string.category_secure_notes),
+        CategoryFilter.NOTES to stringResource(R.string.category_notes),
         CategoryFilter.FAVORITES to stringResource(R.string.category_favorites)
     )
     LazyRow(

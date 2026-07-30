@@ -86,7 +86,7 @@ fun EntryDialog(
                     options = listOf(
                         VaultCategories.LOGINS to stringResource(R.string.category_logins),
                         VaultCategories.CARDS to stringResource(R.string.category_cards),
-                        VaultCategories.SECURE_NOTES to stringResource(R.string.category_secure_notes)
+                        VaultCategories.NOTES to stringResource(R.string.category_notes)
                     ),
                     selectedOption = category,
                     onOptionSelected = { category = it }

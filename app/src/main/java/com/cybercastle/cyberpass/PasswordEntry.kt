@@ -14,19 +14,19 @@ data class PasswordEntry(
 object VaultCategories {
     const val LOGINS = "Logins"
     const val CARDS = "Cards"
-    const val SECURE_NOTES = "Secure Notes"
+    const val NOTES = "Notes"
 
-    val ALL = listOf(LOGINS, CARDS, SECURE_NOTES)
+    val ALL = listOf(LOGINS, CARDS, NOTES)
 }
 
 enum class CategoryFilter {
-    ALL, LOGINS, CARDS, SECURE_NOTES, FAVORITES;
+    ALL, LOGINS, CARDS, NOTES, FAVORITES;
 
     fun matches(entry: PasswordEntry): Boolean = when (this) {
         ALL -> true
         LOGINS -> entry.category.equals(VaultCategories.LOGINS, ignoreCase = true)
         CARDS -> entry.category.equals(VaultCategories.CARDS, ignoreCase = true)
-        SECURE_NOTES -> entry.category.equals(VaultCategories.SECURE_NOTES, ignoreCase = true)
+        NOTES -> entry.category.equals(VaultCategories.NOTES, ignoreCase = true)
         FAVORITES -> entry.isFavorite
     }
 }
