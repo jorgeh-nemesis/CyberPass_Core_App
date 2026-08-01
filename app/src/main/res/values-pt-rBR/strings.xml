@@ -65,4 +65,38 @@
     <string name="delete_confirmation_title">Excluir Entrada</string>
     <string name="delete_confirmation_msg">Tem certeza de que deseja excluir esta entrada?</string>
     <string name="confirm">Confirmar</string>
+
+    <string name="biometric_not_available">Autenticação biométrica indisponível ou não cadastrada</string>
+    <string name="encryption_key_not_found">Chave de criptografia não encontrada. Faça login novamente.</string>
+    <string name="biometric_enabled_success">Biometria ativada com sucesso</string>
+    <string name="biometric_encrypt_key_failed">Falha ao criptografar a chave: %1$s</string>
+    <string name="biometric_cipher_not_authenticated">Cifra não autenticada</string>
+    <string name="biometric_error">Erro de biometria: %1$s</string>
+    <string name="biometric_init_error">Erro ao inicializar a biometria: %1$s</string>
+    <string name="biometric_disabled">Biometria desativada</string>
+    <string name="activity_not_found">Atividade não encontrada</string>
+
+    <string name="no_results_found">Nenhum resultado encontrado</string>
+    <string name="drag_to_reorder">Arraste para reordenar</string>
+    <string name="copy_username">Copiar usuário</string>
+    <string name="copy_password">Copiar senha</string>
+    <string name="edit">Editar</string>
+    <string name="share_via_qr">Compartilhar via QR</string>
+    <string name="delete">Excluir</string>
+    <string name="toggle_favorite">Alternar favorito</string>
+    <string name="show_favorites">Mostrar favoritos</string>
+    <string name="toggle_reorder_mode">Alternar modo de reordenação</string>
+    <string name="error_generating_qr">Erro ao gerar QR</string>
+
+    <string name="category_all">Todos</string>
+    <string name="category_logins">Logins</string>
+    <string name="category_cards">Cartões</string>
+    <string name="category_notes">Notas</string>
+    <string name="category_favorites">Favoritos</string>
+
+    <string name="clipboard_cleared">Área de transferência limpa</string>
+
+    <string name="autofill_unlock_title">Desbloquear CyberPass</string>
+    <string name="autofill_pick_entry">Escolha uma entrada para preencher</string>
+    <string name="autofill_save_failed">Não foi possível salvar no CyberPass</string>
 </resources>

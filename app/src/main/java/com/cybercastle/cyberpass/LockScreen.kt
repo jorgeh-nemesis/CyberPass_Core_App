@@ -1,0 +1,163 @@
+package com.cybercastle.cyberpass
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import javax.crypto.spec.SecretKeySpec
+
+@Composable
+fun LockScreen(
+    onUnlocked: () -> Unit,
+    viewModel: MainViewModel
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var password by remember { mutableStateOf("") }
+    val isFirstTime = remember { SecurePrefs.getSalt(context) == null }
+    val isBiometricEnabled = remember { SecurePrefs.isBiometricEnabled(context) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var isUnlocking by remember { mutableStateOf(false) }
+
+    val incorrectPasswordMsg = stringResource(R.string.incorrect_password)
+    val bioDecryptionFailedMsg = stringResource(R.string.biometric_decryption_failed)
+    val bioInitFailedMsg = stringResource(R.string.biometric_init_failed)
+
+    val bioPromptTitle = stringResource(R.string.biometric_prompt_title)
+    val bioPromptSubtitle = stringResource(R.string.biometric_prompt_subtitle)
+    val bioNegativeButton = stringResource(R.string.biometric_negative_button)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = if (isFirstTime) stringResource(R.string.create_master_password) else stringResource(R.string.enter_master_password),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text(stringResource(R.string.master_password)) },
+            singleLine = true,
+            textStyle = LocalTextStyle.current.merge(MonoCredentialStyle),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (error != null) {
+            Text(text = error!!, color = MaterialTheme.colorScheme.error)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        Button(
+            onClick = {
+                error = null
+                isUnlocking = true
+                scope.launch {
+                    if (isFirstTime) {
+                        val salt = CryptoManager.generateSalt()
+                        val key = CryptoManager.deriveKeySuspending(password.toCharArray(), salt, CryptoManager.ITERATIONS)
+                        SecurePrefs.saveSalt(context, salt)
+                        SecurePrefs.saveIterations(context, CryptoManager.ITERATIONS)
+                        SecurePrefs.saveVerifier(context, key.encoded)
+                        viewModel.setEncryptionKey(key)
+                        isUnlocking = false
+                        onUnlocked()
+                    } else {
+                        val salt = SecurePrefs.getSalt(context)
+                        val storedVerifier = SecurePrefs.getVerifier(context)
+                        if (salt == null || storedVerifier == null) {
+                            isUnlocking = false
+                            return@launch
+                        }
+                        val iterations = SecurePrefs.getIterations(context)
+                        val key = CryptoManager.deriveKeySuspending(password.toCharArray(), salt, iterations)
+                        isUnlocking = false
+                        if (key.encoded.contentEquals(storedVerifier)) {
+                            viewModel.setEncryptionKey(key)
+                            onUnlocked()
+                        } else {
+                            error = incorrectPasswordMsg
+                        }
+                    }
+                }
+            },
+            enabled = password.isNotBlank() && !isUnlocking,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (isUnlocking) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Text(if (isFirstTime) stringResource(R.string.create) else stringResource(R.string.unlock))
+            }
+        }
+
+        if (!isFirstTime && isBiometricEnabled) {
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedButton(
+                onClick = {
+                    val activity = findActivity(context)
+                    val encryptedKey = SecurePrefs.getEncryptedKey(context)
+                    if (activity != null && encryptedKey != null) {
+                        try {
+                            val iv = encryptedKey.sliceArray(0 until 12)
+                            val cipher = SecurityManager.getDecryptCipher(iv)
+                            BiometricAuthManager.showBiometricPrompt(
+                                activity = activity,
+                                title = bioPromptTitle,
+                                subtitle = bioPromptSubtitle,
+                                negativeButtonText = bioNegativeButton,
+                                cryptoObject = androidx.biometric.BiometricPrompt.CryptoObject(cipher),
+                                onSuccess = { result ->
+                                    try {
+                                        val authenticatedCipher = result.cryptoObject?.cipher
+                                        if (authenticatedCipher != null) {
+                                            val decryptedRawKey = authenticatedCipher.doFinal(
+                                                encryptedKey, 12, encryptedKey.size - 12
+                                            )
+                                            val key = SecretKeySpec(decryptedRawKey, "AES")
+                                            viewModel.setEncryptionKey(key)
+                                            onUnlocked()
+                                        }
+                                    } catch (_: Exception) {
+                                        error = bioDecryptionFailedMsg
+                                    }
+                                },
+                                onError = { err -> error = err }
+                            )
+                        } catch (_: Exception) {
+                            error = bioInitFailedMsg
+                        }
+                    }
+                },
+                enabled = !isUnlocking,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Fingerprint, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.unlock_with_biometrics))
+            }
+        }
+    }
+}
