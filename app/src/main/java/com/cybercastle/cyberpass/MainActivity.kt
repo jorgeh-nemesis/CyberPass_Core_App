@@ -21,7 +21,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        // Screenshots/screen recording are blocked in every real build. Debug
+        // builds skip it so promo/dev screenshots can be captured normally -
+        // release builds (what ships) always keep the protection.
+        if (!BuildConfig.DEBUG) {
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        }
 
         // Apply saved language before setContent
         val savedLanguage = runBlocking {
