@@ -21,11 +21,11 @@ It stores your credentials in an encrypted vault that never touches the network�
 - Biometric authentication uses Android’s hardware‑backed Keystore—the key is never exposed to the app.
 - Clipboard is automatically cleared after 45 seconds and marked as sensitive on Android 13+.
 
-## 📄 License
+##  License
 This project is licensed under the Mozilla Public License 2.0 – see the LICENSE file for details.
 
 
-## 📥 Download
+##  Download
 [![F‑Droid](https://img.shields.io/badge/F‑Droid-Get%20it%20on%20F‑Droid-blue)](https://f-droid.org/packages/com.cybercastle.cyberpass/) *(Coming soon)*
 
 You can also grab the latest APK from the [Releases](../../releases) page.
