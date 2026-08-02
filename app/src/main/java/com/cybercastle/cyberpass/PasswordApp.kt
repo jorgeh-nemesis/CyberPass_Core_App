@@ -35,6 +35,7 @@ fun PasswordApp(viewModel: MainViewModel) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
+    val vaultError by viewModel.vaultError.collectAsStateWithLifecycle()
 
     val showAddDialog = remember { mutableStateOf(false) }
     val showSettings = remember { mutableStateOf(false) }
@@ -55,6 +56,20 @@ fun PasswordApp(viewModel: MainViewModel) {
     val backupFailedMsg = stringResource(R.string.backup_failed)
     val restoreSuccessMsg = stringResource(R.string.restore_successful)
     val restoreFailedMsg = stringResource(R.string.restore_failed)
+    val vaultLoadErrorMsg = stringResource(R.string.vault_load_error)
+    val vaultSaveErrorMsg = stringResource(R.string.vault_save_error)
+
+    LaunchedEffect(vaultError) {
+        val message = when (vaultError) {
+            VaultError.LOAD_FAILED -> vaultLoadErrorMsg
+            VaultError.SAVE_FAILED -> vaultSaveErrorMsg
+            null -> null
+        }
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearVaultError()
+        }
+    }
 
     val lazyListState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->

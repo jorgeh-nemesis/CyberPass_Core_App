@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.app.assist.AssistStructure
 import android.os.Build
 import android.os.CancellationSignal
+import android.util.Log
 import android.service.autofill.AutofillService
 import android.service.autofill.Dataset
 import android.service.autofill.FillCallback
@@ -60,7 +61,14 @@ class CyberPassAutofillService : AutofillService() {
         if (key != null) {
             val repo = PasswordRepository(applicationContext)
             repo.setEncryptionKey(key)
-            val matches = matchEntries(repo.loadEntries(), target)
+            val entries = when (val result = repo.loadEntries()) {
+                is LoadResult.Success -> result.entries
+                is LoadResult.Failure -> {
+                    Log.e(TAG, "Failed to load vault for autofill (${result.error.javaClass.simpleName})")
+                    return null
+                }
+            }
+            val matches = matchEntries(entries, target)
             if (matches.isEmpty()) return null
             matches.take(MAX_DATASETS).forEach { entry ->
                 responseBuilder.addDataset(buildDataset(entry, target))
@@ -147,7 +155,16 @@ class CyberPassAutofillService : AutofillService() {
         serviceScope.launch {
             val repo = PasswordRepository(applicationContext)
             repo.setEncryptionKey(key)
-            val entries = repo.loadEntries().toMutableList()
+            val entries = when (val result = repo.loadEntries()) {
+                is LoadResult.Success -> result.entries.toMutableList()
+                is LoadResult.Failure -> {
+                    // Do NOT fall back to an empty list here - saving it would
+                    // overwrite the real vault with just this one new entry.
+                    Log.e(TAG, "Failed to load vault before autofill save (${result.error.javaClass.simpleName})")
+                    callback.onFailure(getString(R.string.autofill_save_failed))
+                    return@launch
+                }
+            }
             entries.add(
                 PasswordEntry(
                     title = target.webDomain ?: appLabel(target.appPackage) ?: getString(R.string.app_name),
@@ -156,8 +173,10 @@ class CyberPassAutofillService : AutofillService() {
                     category = VaultCategories.LOGINS
                 )
             )
-            repo.saveEntries(entries)
-            callback.onSuccess()
+            when (repo.saveEntries(entries)) {
+                is SaveResult.Success -> callback.onSuccess()
+                is SaveResult.Failure -> callback.onFailure(getString(R.string.autofill_save_failed))
+            }
         }
     }
 
@@ -180,6 +199,7 @@ class CyberPassAutofillService : AutofillService() {
     }
 
     companion object {
+        private const val TAG = "CyberPassAutofill"
         private const val MAX_DATASETS = 5
     }
 }

@@ -99,4 +99,7 @@
     <string name="autofill_unlock_title">Unlock CyberPass</string>
     <string name="autofill_pick_entry">Choose an entry to fill</string>
     <string name="autofill_save_failed">Couldn\'t save to CyberPass</string>
+
+    <string name="vault_load_error">Could not read your vault — it may be corrupted</string>
+    <string name="vault_save_error">Failed to save changes</string>
 </resources>

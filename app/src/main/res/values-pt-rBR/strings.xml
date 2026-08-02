@@ -99,4 +99,7 @@
     <string name="autofill_unlock_title">Desbloquear CyberPass</string>
     <string name="autofill_pick_entry">Escolha uma entrada para preencher</string>
     <string name="autofill_save_failed">Não foi possível salvar no CyberPass</string>
+
+    <string name="vault_load_error">Não foi possível ler seu cofre — ele pode estar corrompido</string>
+    <string name="vault_save_error">Falha ao salvar as alterações</string>
 </resources>

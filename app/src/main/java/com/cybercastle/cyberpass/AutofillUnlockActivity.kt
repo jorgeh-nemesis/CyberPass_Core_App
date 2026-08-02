@@ -102,6 +102,7 @@ private fun AutofillUnlockScreen(
     var isUnlocking by remember { mutableStateOf(false) }
 
     val incorrectPasswordMsg = stringResource(R.string.incorrect_password)
+    val vaultLoadErrorMsg = stringResource(R.string.vault_load_error)
 
     Column(
         modifier = Modifier
@@ -158,13 +159,20 @@ private fun AutofillUnlockScreen(
                             VaultSession.setKey(key)
                             val repo = PasswordRepository(context)
                             repo.setEncryptionKey(key)
-                            val entries = repo.loadEntries()
-                            val needle = (webDomain ?: appLabelFor(context, appPackage))?.lowercase()
-                            matches = if (needle.isNullOrBlank()) {
-                                entries
-                            } else {
-                                entries.filter { it.title.lowercase().contains(needle) || needle.contains(it.title.lowercase()) }
-                                    .ifEmpty { entries }
+                            when (val result = repo.loadEntries()) {
+                                is LoadResult.Success -> {
+                                    val entries = result.entries
+                                    val needle = (webDomain ?: appLabelFor(context, appPackage))?.lowercase()
+                                    matches = if (needle.isNullOrBlank()) {
+                                        entries
+                                    } else {
+                                        entries.filter { it.title.lowercase().contains(needle) || needle.contains(it.title.lowercase()) }
+                                            .ifEmpty { entries }
+                                    }
+                                }
+                                is LoadResult.Failure -> {
+                                    error = vaultLoadErrorMsg
+                                }
                             }
                             isUnlocking = false
                         }

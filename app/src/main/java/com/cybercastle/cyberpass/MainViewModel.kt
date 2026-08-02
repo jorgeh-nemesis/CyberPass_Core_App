@@ -14,6 +14,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Collections
 
+enum class VaultError { LOAD_FAILED, SAVE_FAILED }
+
 class MainViewModel : ViewModel() {
     private val repository = PasswordRepository(MyApp.appContext)
     private val gson = Gson()
@@ -44,43 +46,68 @@ class MainViewModel : ViewModel() {
         _categoryFilter.value = filter
     }
 
+    private val _vaultError = MutableStateFlow<VaultError?>(null)
+    val vaultError: StateFlow<VaultError?> = _vaultError
+
+    fun clearVaultError() {
+        _vaultError.value = null
+    }
+
     fun loadEntries() {
         viewModelScope.launch {
-            _entries.value = repository.loadEntries()
+            when (val result = repository.loadEntries()) {
+                is LoadResult.Success -> _entries.value = result.entries
+                is LoadResult.Failure -> _vaultError.value = VaultError.LOAD_FAILED
+            }
         }
     }
 
     fun addEntry(entry: PasswordEntry) {
         viewModelScope.launch {
             val updated = _entries.value.toMutableList().apply { add(entry) }
-            repository.saveEntries(updated)
-            _entries.value = updated
+            when (repository.saveEntries(updated)) {
+                is SaveResult.Success -> _entries.value = updated
+                is SaveResult.Failure -> _vaultError.value = VaultError.SAVE_FAILED
+            }
         }
     }
 
     fun updateEntry(updatedEntry: PasswordEntry) {
         viewModelScope.launch {
             val updated = _entries.value.map { if (it.id == updatedEntry.id) updatedEntry else it }
-            repository.saveEntries(updated)
-            _entries.value = updated
+            when (repository.saveEntries(updated)) {
+                is SaveResult.Success -> _entries.value = updated
+                is SaveResult.Failure -> _vaultError.value = VaultError.SAVE_FAILED
+            }
         }
     }
 
     fun deleteEntry(entry: PasswordEntry) {
         viewModelScope.launch {
             val updated = _entries.value.filter { it.id != entry.id }
-            repository.saveEntries(updated)
-            _entries.value = updated
+            when (repository.saveEntries(updated)) {
+                is SaveResult.Success -> _entries.value = updated
+                is SaveResult.Failure -> _vaultError.value = VaultError.SAVE_FAILED
+            }
         }
     }
 
     fun moveEntry(fromIndex: Int, toIndex: Int) {
-        val currentList = _entries.value.toMutableList()
+        val previous = _entries.value
+        val currentList = previous.toMutableList()
         if (fromIndex in currentList.indices && toIndex in currentList.indices) {
             Collections.swap(currentList, fromIndex, toIndex)
+            // Applied optimistically so drag-reordering feels instant; reverted
+            // below if the reordered list fails to persist.
             _entries.value = currentList
             viewModelScope.launch {
-                repository.saveEntries(currentList)
+                when (repository.saveEntries(currentList)) {
+                    is SaveResult.Success -> {}
+                    is SaveResult.Failure -> {
+                        _entries.value = previous
+                        _vaultError.value = VaultError.SAVE_FAILED
+                    }
+                }
             }
         }
     }
@@ -101,6 +128,7 @@ class MainViewModel : ViewModel() {
         repository.clearEncryptionKey()
         VaultSession.clear()
         _entries.value = emptyList()
+        _vaultError.value = null
         _isLocked.value = true
         AppLockManager.acknowledgeLock()
     }
