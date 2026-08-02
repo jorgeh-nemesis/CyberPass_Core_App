@@ -30,7 +30,7 @@ This project is licensed under the Mozilla Public License 2.0 – see the LICENS
 
 You can also grab the latest APK from the [Releases](../../releases) page.
 
-## 🛠️ Building from Source
+##  Building from Source
 1. Clone the repository:
    ```bash
    git clone https://github.com/jorgeh-nemesis/CyberPass_Core_App.git
