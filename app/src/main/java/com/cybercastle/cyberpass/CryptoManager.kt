@@ -58,6 +58,9 @@ object CryptoManager {
     }
 
     fun decrypt(encryptedData: ByteArray, key: SecretKey): ByteArray {
+        require(encryptedData.size > IV_LENGTH) {
+            "Encrypted data too short (${encryptedData.size} bytes) to contain a valid IV + ciphertext"
+        }
         val iv = encryptedData.sliceArray(0 until IV_LENGTH)
         val cipher = Cipher.getInstance(TRANSFORMATION)
         val spec = GCMParameterSpec(TAG_LENGTH, iv)
