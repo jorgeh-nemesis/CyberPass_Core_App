@@ -5,7 +5,7 @@ It stores your credentials in an encrypted vault that never touches the network�
 
 > **Developed with ❤️ by [Cyber Castle](https://cybercastle.dev)** — we build secure, privacy-first digital tools.
 
-## ✨ Features
+##  Features
 - **Offline‑first** – No internet permission, no cloud sync, no telemetry.
 - **Strong encryption** – AES‑GCM with PBKDF2 (600k iterations) and Android Keystore for biometric unlock.
 - **Autofill support** – Seamlessly fills usernames/passwords in apps and browsers (Android Autofill).
@@ -14,7 +14,7 @@ It stores your credentials in an encrypted vault that never touches the network�
 - **Biometric unlock** – Fingerprint with cryptographic binding.
 - **Lightweight & modern** – Built with Kotlin and Jetpack Compose.
 
-## 🔒 Security Model
+##  Security Model
 - Master password is **never stored**; only a salted PBKDF2 verifier is kept.
 - All sensitive data are encrypted with a key derived from your master password.
 - The key is **never persisted**; it lives only in memory while the app is unlocked.
