@@ -1,7 +1,19 @@
-﻿plugins {
+﻿import java.util.Properties
+
+plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+// 1. Load keystore properties from app/ directory
+val keystoreProperties = Properties()
+val keystorePropertiesFile = file("keystore.properties")
+
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { stream ->
+        keystoreProperties.load(stream)
+    }
 }
 
 android {
@@ -19,8 +31,28 @@ android {
     }
 
     signingConfigs {
-        // The 'debug' config is created by default. 
-        // We only need to reference it or customize it if needed.
+        create("release") {
+            val ksFile = file("release.keystore")
+            val storePass = keystoreProperties.getProperty("RELEASE_STORE_PASSWORD")
+            val alias = keystoreProperties.getProperty("RELEASE_KEY_ALIAS")
+            val keyPass = keystoreProperties.getProperty("RELEASE_KEY_PASSWORD")
+
+            // Hard validation: Fail the build immediately if credentials or keystore are missing
+            if (!keystorePropertiesFile.exists()) {
+                throw GradleException("Signing Error: 'app/keystore.properties' does not exist in worktree.")
+            }
+            if (!ksFile.exists()) {
+                throw GradleException("Signing Error: 'app/release.keystore' does not exist in ${ksFile.absolutePath}")
+            }
+            if (storePass.isNullOrEmpty() || alias.isNullOrEmpty() || keyPass.isNullOrEmpty()) {
+                throw GradleException("Signing Error: One or more RELEASE_* keys in keystore.properties are missing or empty.")
+            }
+
+            storeFile = ksFile
+            storePassword = storePass
+            keyAlias = alias
+            keyPassword = keyPass
+        }
     }
 
     buildTypes {
@@ -28,8 +60,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         release {
-            // Using debug signing for release builds as requested
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
