@@ -34,6 +34,14 @@ object ClipboardGuard {
             }
         }
 
+        // TODO(security): this closure holds `text` (plaintext password) for
+        // the full clearAfterMillis window (~45s) so it can be compared
+        // against the clipboard's contents before wiping. That's the longest-
+        // lived plaintext-in-memory exposure found in the PasswordEntry.password
+        // audit (see PasswordEntry.kt). Fixing it would mean comparing against
+        // something derived (e.g. a hash) instead of the raw string - left as a
+        // follow-up since it's a behavior change to the clear check, not just
+        // a rename.
         pendingClearJob?.cancel()
         pendingClearJob = scope.launch {
             clipboard.setClipEntry(ClipEntry(clipData))

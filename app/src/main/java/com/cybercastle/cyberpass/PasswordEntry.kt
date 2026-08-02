@@ -1,5 +1,19 @@
 package com.cybercastle.cyberpass
 
+// password is intentionally String, not CharArray. CharArray would let us
+// explicitly wipe() plaintext after use, but String is the pragmatic choice
+// here: PasswordEntry is serialized directly via Gson (would need a custom
+// TypeAdapter<CharArray> kept in sync across PasswordRepository and
+// MainViewModel.changeMasterPassword's separate Gson instances), Compose's
+// OutlinedTextField only accepts String so EntryDialog/EntryCard would hold a
+// String copy regardless, and a shared wipe() is unsafe unless every consumer
+// (ClipboardGuard, autofill) is guaranteed to receive its own CharArray copy
+// rather than the live array backing the entry in MainViewModel._entries -
+// get that wrong and e.g. a clipboard copy zeroes the vault's in-memory
+// password. See ClipboardGuard.copySensitive for the one real long-lived-
+// plaintext exposure this audit found; everything else (autofill field
+// parsing/save, load/save paths) only holds password strings in
+// function/coroutine-local scope.
 data class PasswordEntry(
     val id: Long = System.currentTimeMillis(),
     val title: String,
