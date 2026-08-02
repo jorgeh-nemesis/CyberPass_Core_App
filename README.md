@@ -33,7 +33,6 @@ Mozilla Public License 2.0 (MPL-2.0), see `LICENSE` for details.
 
 ## Building
 
-```bash
-git clone [https://github.com/jorgeh-nemesis/CyberPass_Core_App.git](https://github.com/jorgeh-nemesis/CyberPass_Core_App.git)
+git clone https://github.com/jorgeh-nemesis/CyberPass_Core_App.git
 cd CyberPass_Core_App
 ./gradlew assembleDebug
