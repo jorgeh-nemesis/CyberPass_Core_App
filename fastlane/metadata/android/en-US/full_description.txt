@@ -1,0 +1,7 @@
+CyberPass is a fully offline, open-source password manager designed for maximum privacy and security.
+
+Features:
+- Offline-first: No internet permission, no cloud sync, no tracking.
+- Strong Encryption: AES-GCM encryption with PBKDF2 key derivation.
+- Biometric Unlock: Local authentication using Android Keystore.
+- Autofill Support: Fill credentials seamlessly in apps and browsers.

@@ -1,0 +1,1 @@
+Offline-first, encrypted password manager for privacy and security.
