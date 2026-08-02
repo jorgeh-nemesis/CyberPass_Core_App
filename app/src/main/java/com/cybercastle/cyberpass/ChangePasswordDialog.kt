@@ -103,7 +103,6 @@ fun ChangePasswordDialog(
                                 return@Button
                             }
                             isProcessing = true
-                            // Verify old password and change
                             viewModel.changeMasterPassword(
                                 context,
                                 oldPassword,

@@ -1,5 +1,6 @@
 package com.cybercastle.cyberpass
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,6 +29,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricPrompt
 import kotlinx.coroutines.launch
+
+private const val TAG = "SettingsBottomSheet"
 
 @Composable
 fun SectionHeader(label: String) {
@@ -187,60 +190,58 @@ fun SettingsBottomSheet(
                 return
             }
 
-            val activity = findActivity(context)
-            if (activity != null) {
-                val key = viewModel.getEncryptionKey()
-                if (key == null) {
-                    Toast.makeText(context, encryptionKeyNotFoundMsg, Toast.LENGTH_SHORT).show()
-                    return
-                }
-
-                try {
-                    SecurityManager.createBiometricKey()
-                    val cipher = try {
-                        SecurityManager.getEncryptCipher()
-                    } catch (_: android.security.keystore.KeyPermanentlyInvalidatedException) {
-                        SecurityManager.deleteBiometricKey()
-                        SecurityManager.createBiometricKey()
-                        SecurityManager.getEncryptCipher()
-                    }
-
-                    BiometricAuthManager.showBiometricPrompt(
-                        activity = activity,
-                        title = bioPromptTitle,
-                        subtitle = bioPromptSubtitle,
-                        negativeButtonText = bioNegativeButton,
-                        cryptoObject = BiometricPrompt.CryptoObject(cipher),
-                        onSuccess = { result ->
-                            val authenticatedCipher = result.cryptoObject?.cipher
-                            if (authenticatedCipher != null) {
-                                try {
-                                    val iv = authenticatedCipher.iv
-                                    val encrypted = authenticatedCipher.doFinal(key.encoded)
-                                    SecurePrefs.saveEncryptedKey(context, iv + encrypted)
-                                    SecurePrefs.setBiometricEnabled(context, true)
-                                    biometricEnabled.value = true
-                                    Toast.makeText(context, biometricEnabledSuccessMsg, Toast.LENGTH_SHORT).show()
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    Toast.makeText(context, biometricEncryptKeyFailedMsg.format(e.message), Toast.LENGTH_SHORT).show()
-                                }
-                            } else {
-                                Toast.makeText(context, biometricCipherNotAuthenticatedMsg, Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        onError = { err ->
-                            coroutineScope.launch {
-                                Toast.makeText(context, biometricErrorMsg.format(err), Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    )
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    Toast.makeText(context, biometricInitErrorMsg.format(e.message), Toast.LENGTH_SHORT).show()
-                }
-            } else {
+            val activity = findActivity(context) ?: run {
                 Toast.makeText(context, activityNotFoundMsg, Toast.LENGTH_SHORT).show()
+                return
+            }
+            val key = viewModel.getEncryptionKey() ?: run {
+                Toast.makeText(context, encryptionKeyNotFoundMsg, Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            try {
+                SecurityManager.createBiometricKey()
+                val cipher = try {
+                    SecurityManager.getEncryptCipher()
+                } catch (_: android.security.keystore.KeyPermanentlyInvalidatedException) {
+                    SecurityManager.deleteBiometricKey()
+                    SecurityManager.createBiometricKey()
+                    SecurityManager.getEncryptCipher()
+                }
+
+                BiometricAuthManager.showBiometricPrompt(
+                    activity = activity,
+                    title = bioPromptTitle,
+                    subtitle = bioPromptSubtitle,
+                    negativeButtonText = bioNegativeButton,
+                    cryptoObject = BiometricPrompt.CryptoObject(cipher),
+                    onSuccess = { result ->
+                        val authenticatedCipher = result.cryptoObject?.cipher
+                        if (authenticatedCipher != null) {
+                            try {
+                                val iv = authenticatedCipher.iv
+                                val encrypted = authenticatedCipher.doFinal(key.encoded)
+                                SecurePrefs.saveEncryptedKey(context, iv + encrypted)
+                                SecurePrefs.setBiometricEnabled(context, true)
+                                biometricEnabled.value = true
+                                Toast.makeText(context, biometricEnabledSuccessMsg, Toast.LENGTH_SHORT).show()
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to encrypt biometric key (${e.javaClass.simpleName})")
+                                Toast.makeText(context, biometricEncryptKeyFailedMsg.format(e.javaClass.simpleName), Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(context, biometricCipherNotAuthenticatedMsg, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onError = { err ->
+                        coroutineScope.launch {
+                            Toast.makeText(context, biometricErrorMsg.format(err), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize biometric prompt (${e.javaClass.simpleName})")
+                Toast.makeText(context, biometricInitErrorMsg.format(e.javaClass.simpleName), Toast.LENGTH_SHORT).show()
             }
         } else {
             SecurePrefs.setBiometricEnabled(context, false)
@@ -249,7 +250,6 @@ fun SettingsBottomSheet(
         }
     }
 
-    // Observe current language preference
     val languageFlow = LanguageManager.getLanguageFlow(context)
     val currentLanguage by languageFlow.collectAsState(initial = LanguageManager.LANGUAGE_DEFAULT)
 
@@ -276,7 +276,7 @@ fun SettingsBottomSheet(
                     true
                 } else false
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Backup failed (${e.javaClass.simpleName})")
                 false
             }
             onBackupComplete(success)
@@ -300,7 +300,7 @@ fun SettingsBottomSheet(
                     false
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Restore failed (${e.javaClass.simpleName})")
                 false
             }
             onRestoreComplete(success)
@@ -324,7 +324,6 @@ fun SettingsBottomSheet(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Dados Section
         SectionHeader(stringResource(R.string.section_data))
         SettingsItem(
             label = stringResource(R.string.backup_database),
@@ -346,7 +345,6 @@ fun SettingsBottomSheet(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Segurança Section
         SectionHeader(stringResource(R.string.section_security))
         SettingsItem(
             label = stringResource(R.string.biometric_unlock),
@@ -369,7 +367,6 @@ fun SettingsBottomSheet(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Idioma Section
         SectionHeader(stringResource(R.string.section_language))
         ChipSelector(
             options = listOf(

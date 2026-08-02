@@ -1,5 +1,6 @@
 package com.cybercastle.cyberpass
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
+private const val TAG = "QrShareDialog"
+
 @Composable
 fun QrShareDialog(
     entry: PasswordEntry,
@@ -24,7 +27,7 @@ fun QrShareDialog(
         try {
             QrManager.generateQrCode(entry.password)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Failed to generate QR code (${e.javaClass.simpleName})")
             null
         }
     }
