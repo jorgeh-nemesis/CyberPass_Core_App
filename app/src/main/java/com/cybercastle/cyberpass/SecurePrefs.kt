@@ -3,6 +3,7 @@
 package com.cybercastle.cyberpass
 
 import android.content.Context
+import android.util.Base64
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -27,21 +28,21 @@ object SecurePrefs {
     )
 
     fun saveSalt(context: Context, salt: ByteArray) {
-        getPrefs(context).edit { putString(KEY_SALT, salt.joinToString(",")) }
+        getPrefs(context).edit { putString(KEY_SALT, encodeBytes(salt)) }
     }
 
     fun getSalt(context: Context): ByteArray? {
         val saltStr = getPrefs(context).getString(KEY_SALT, null) ?: return null
-        return saltStr.split(",").map { it.toByte() }.toByteArray()
+        return decodeBytes(saltStr)
     }
 
     fun saveVerifier(context: Context, verifier: ByteArray) {
-        getPrefs(context).edit { putString(KEY_VERIFIER, verifier.joinToString(",")) }
+        getPrefs(context).edit { putString(KEY_VERIFIER, encodeBytes(verifier)) }
     }
 
     fun getVerifier(context: Context): ByteArray? {
         val verifierStr = getPrefs(context).getString(KEY_VERIFIER, null) ?: return null
-        return verifierStr.split(",").map { it.toByte() }.toByteArray()
+        return decodeBytes(verifierStr)
     }
 
     fun saveIterations(context: Context, iterations: Int) {
@@ -63,11 +64,26 @@ object SecurePrefs {
     }
 
     fun saveEncryptedKey(context: Context, encryptedKey: ByteArray) {
-        getPrefs(context).edit { putString(KEY_ENCRYPTED_KEY, encryptedKey.joinToString(",")) }
+        getPrefs(context).edit { putString(KEY_ENCRYPTED_KEY, encodeBytes(encryptedKey)) }
     }
 
     fun getEncryptedKey(context: Context): ByteArray? {
         val keyStr = getPrefs(context).getString(KEY_ENCRYPTED_KEY, null) ?: return null
-        return keyStr.split(",").map { it.toByte() }.toByteArray()
+        return decodeBytes(keyStr)
+    }
+
+    private fun encodeBytes(bytes: ByteArray): String = Base64.encodeToString(bytes, Base64.NO_WRAP)
+
+    // TODO(remove after v1.1): installs that saved these values before this
+    // change wrote them as comma-joined decimal strings (e.g. "18,-3,127"),
+    // which aren't valid Base64. Fall back to that legacy parse once so
+    // upgrading users aren't locked out; every save* call above rewrites the
+    // value as Base64, so the fallback naturally stops being hit over time.
+    private fun decodeBytes(value: String): ByteArray {
+        return try {
+            Base64.decode(value, Base64.NO_WRAP)
+        } catch (_: IllegalArgumentException) {
+            value.split(",").map { it.toByte() }.toByteArray()
+        }
     }
 }
