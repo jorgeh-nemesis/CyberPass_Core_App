@@ -33,25 +33,28 @@ android {
     signingConfigs {
         create("release") {
             val ksFile = file("release.keystore")
-            val storePass = keystoreProperties.getProperty("RELEASE_STORE_PASSWORD")
-            val alias = keystoreProperties.getProperty("RELEASE_KEY_ALIAS")
-            val keyPass = keystoreProperties.getProperty("RELEASE_KEY_PASSWORD")
 
-            // Hard validation: Fail the build immediately if credentials or keystore are missing
-            if (!keystorePropertiesFile.exists()) {
-                throw GradleException("Signing Error: 'app/keystore.properties' does not exist in worktree.")
-            }
-            if (!ksFile.exists()) {
-                throw GradleException("Signing Error: 'app/release.keystore' does not exist in ${ksFile.absolutePath}")
-            }
-            if (storePass.isNullOrEmpty() || alias.isNullOrEmpty() || keyPass.isNullOrEmpty()) {
-                throw GradleException("Signing Error: One or more RELEASE_* keys in keystore.properties are missing or empty.")
-            }
+            // Only configure signing if the keystore + credentials are present.
+            // F-Droid's build servers do NOT have these files — they build from
+            // clean source and sign with their own key. Falling back to no
+            // signing config here (instead of throwing) lets the release build
+            // type still compile successfully on F-Droid's infra, while local/
+            // CI builds that DO have keystore.properties are signed exactly as
+            // before.
+            if (keystorePropertiesFile.exists() && ksFile.exists()) {
+                val storePass = keystoreProperties.getProperty("RELEASE_STORE_PASSWORD")
+                val alias = keystoreProperties.getProperty("RELEASE_KEY_ALIAS")
+                val keyPass = keystoreProperties.getProperty("RELEASE_KEY_PASSWORD")
 
-            storeFile = ksFile
-            storePassword = storePass
-            keyAlias = alias
-            keyPassword = keyPass
+                if (storePass.isNullOrEmpty() || alias.isNullOrEmpty() || keyPass.isNullOrEmpty()) {
+                    throw GradleException("Signing Error: One or more RELEASE_* keys in keystore.properties are missing or empty.")
+                }
+
+                storeFile = ksFile
+                storePassword = storePass
+                keyAlias = alias
+                keyPassword = keyPass
+            }
         }
     }
 
@@ -60,7 +63,12 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Same reasoning: only attach the release signing config when it's
+            // actually usable. On F-Droid's servers this resolves to null and
+            // Gradle produces an unsigned release APK, which F-Droid then signs
+            // with its own key. Locally / in your own CI (with keystore.properties
+            // present) this still resolves to the fully signed config as before.
+            signingConfig = if (keystorePropertiesFile.exists()) signingConfigs.getByName("release") else null
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
